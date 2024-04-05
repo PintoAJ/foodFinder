@@ -116,15 +116,77 @@ def init_db(c):
                      (99, "PZA Restaurant & Bar", "Vaughan", "7777 Weston Road, Woodbridge", "Italian", "(905) 605-2335", 0, 0, 0, 0), 
                      (100, "3 Mariachis", "Vaughan", "9200 Weston Rd, Vaughan", "Mexican", "(905) 832-0606", 0, 1, 1, 0)
             """)
+
+def filter(cities, cuisines, restrictions):
+   c1, c2, c3 = len(cities) != 0, len(cuisines) != 0, len(restrictions) != 0
+   where = " WHERE"
+   
+   # edge case: no filter criteria
+   if not (c1 or c2 or c3):
+      return ""
+   
+   # filter by cities
+   if c1:
+      temp = "City = "
+      for i in range(len(cities)):
+         if i == 0:
+            temp += "'{}'".format(cities[i])
+         else:
+            temp += " OR City = '{}'".format(cities[i])
+      where += " ({})".format(temp)
+   
+   # filter by cuisine
+   if c2:
+      temp = " Cuisine = "
+      for i in range(len(cuisines)):
+         if i == 0:
+            temp += "'{}'".format(cuisines[i])
+         else:
+            temp += " OR Cuisine = '{}'".format(cuisines[i])
+      if c1:
+         where += " AND ({})".format(temp)
+      else:
+         where += " ({})".format(temp)
+   
+   # filter by dietary restrictions
+   if c3:
+      temp = ""
+      for i in range(len(restrictions)):
+         if i == 0:
+            temp += "{} = 1".format(restrictions[i])
+         else:
+            temp += " AND {} = 1".format(restrictions[i])
+      if c1 or c2:
+         where += " AND ({})".format(temp)
+      else:
+         where += " ({})"
+   
+   print(where)
+   return where
+
+def get_restaurants(c, cities, cuisines, restrictions):
+   where = filter(cities, cuisines, restrictions)
+   stat = """SELECT * FROM Restaurant""" + where
+   # print(stat)
+   rs = c.execute(stat)
+   return rs.fetchall()
     
 if __name__ == "__main__":
    conn = sqlite3.connect("project.db")
    c = conn.cursor()
    init_db(c)
-      
-   rs = c.execute("""SELECT * FROM Restaurant WHERE City = 'Mississauga'""")
-   for r in rs.fetchall():
+    
+   ci = ["Mississauga", "Brampton", "Markham"]
+   cu = ["Canadian", "Japanese", "American"]
+   rt = []
+   rs = get_restaurants(c, ci, cu, rt)
+   
+   for r in rs:
       print(r)
+      
+   # rs = c.execute("""SELECT * FROM Restaurant WHERE City = 'Mississauga'""")
+   # for r in rs.fetchall():
+   #    print(r)
         
    conn.commit()
    conn.close()
