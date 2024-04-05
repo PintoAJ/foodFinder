@@ -1,16 +1,27 @@
 import tkinter as tk
 
+def search():
+    # query = entry.get()
+    selected_locations = [location.get() for location in location_vars]
+    selected_cuisines = [cuisine.get() for cuisine in cuisine_vars]
+    selected_restrictions = [restriction.get() for restriction in restriction_vars]
+
+    # print("Searching for:", query)
+    print("Selected Locations:", selected_locations)
+    print("Selected Cuisines:", selected_cuisines)
+    print("Selected Dietary Restrictions:", selected_restrictions)
+
 # root window
 root = tk.Tk()
 root.title("Food Finder")
 root.geometry('800x700')
 
 # search bar
-entry = tk.Entry(root, width=50)
-entry.place(x=150, y=20)
+# entry = tk.Entry(root, width=50)
+# entry.place(x=150, y=20)
 
 # search button
-search_button = tk.Button(root, text="Search",width=20, height=2)
+search_button = tk.Button(root, text="Search", command=search, width=20, height=2)
 search_button.place(x=250, y=625)
 
 filters = [

@@ -161,7 +161,7 @@ def filter(cities, cuisines, restrictions):
       else:
          where += " ({})"
    
-   print(where)
+   # print(where)
    return where
 
 def get_restaurants(c, cities, cuisines, restrictions):
