@@ -3,9 +3,9 @@ from tkinter import ttk
 import sqlite3
 import sql
 
+
 class FoodDeliveryApp:
     def __init__(self, root):
-        
         self.root = root
         self.root.title("Food Finder")
 
@@ -16,6 +16,7 @@ class FoodDeliveryApp:
         # Create pages
         self.home_page = HomePage(self.main_container)
         self.search_page = SearchPage(self.main_container)
+        self.results_page = ResultsPage(self.main_container)
 
         # Show home page initially
         self.home_page.show()
@@ -61,10 +62,10 @@ class HomePage(Page):
 
     def open_search_page(self):
         global app
-        
+
         # self.hide()
         # app.search_page.show()
-        
+
         self.home_frame.pack_forget()
         app.search_page.search_frame.pack(fill='both', expand=True)
 
@@ -82,7 +83,7 @@ class SearchPage(Page):
         # Add back button
         back_button = ttk.Button(self.search_frame, text="Back", command=self.go_back)
         back_button.pack(pady=10)
-        
+
         # search button
         search_button = tk.Button(self.search_frame, text="Search", command=self.search, width=20, height=2)
         search_button.place(x=250, y=625)
@@ -92,14 +93,18 @@ class SearchPage(Page):
         #     "Cuisines:": ["Canadian", "American", "Ramen", "Seafood", "Italian", "French", "Jamaican", "Mediterranean", "Burgers", "Steakhouse", "Global", "Thai", "Somalian", "Mexican", "Indian", "Chinese", "European", "Japanese", "Iranian", "Irish"],
         #     "Dietary Restrictions:": ["Halal", "Gluten Free", "Kosher", "Vegetarian"],
         # }
-        
+
         self.filters = [
-            ("Location:", ["Toronto", "Brock", "Oshawa", "Burlington", "Oakville", "Brampton", "Mississauga", "Markham", "Vaughan"]),
-            ("Cuisines:", ["Canadian", "American", "Ramen", "Seafood", "Italian", "French", "Jamaican", "Mediterranean", "Burgers", "Steakhouse", "Global", "Thai", "Somalian", "Mexican", "Indian", "Chinese", "European", "Japanese", "Iranian", "Irish"]),
+            ("Location:",
+             ["Toronto", "Brock", "Oshawa", "Burlington", "Oakville", "Brampton", "Mississauga", "Markham", "Vaughan"]),
+            ("Cuisines:",
+             ["Canadian", "American", "Ramen", "Seafood", "Italian", "French", "Jamaican", "Mediterranean", "Burgers",
+              "Steakhouse", "Global", "Thai", "Somalian", "Mexican", "Indian", "Chinese", "European", "Japanese",
+              "Iranian", "Irish"]),
             ("Dietary Restrictions:", ["Halal", "Gluten_Free", "Kosher", "Vegetarian"])
         ]
-        
-        # print(self.filters)
+
+        print(self.filters)
 
         # BooleanVars to track the state of checkboxes
         self.location_vars = [tk.BooleanVar() for _ in range(len(self.filters[0][1]))]
@@ -109,32 +114,39 @@ class SearchPage(Page):
         # initial y position for title, options, and checkboxes
         y_position = 100
 
-        for (label, options), var_list in zip(self.filters, [self.location_vars, self.cuisine_vars, self.restriction_vars]):
+        for (label, options), var_list in zip(self.filters,
+                                              [self.location_vars, self.cuisine_vars, self.restriction_vars]):
             # create label for the filter category
-            tk.Label(self.search_frame, text=label, background='grey', bg='grey', font=("Poppins", 17, "bold")).place(x=10, y=y_position)
-            
+            tk.Label(self.search_frame, text=label, background='grey', bg='grey', font=("Poppins", 17, "bold")).place(
+                x=10, y=y_position)
+
             # checkboxes for each option in the category
             for i, option in enumerate(options):
                 # column and row positions for placing the checkboxes
                 col = i % 3
                 row = i // 3
-                tk.Checkbutton(self.search_frame, text=option, variable=var_list[i]).place(x=10 + col * 200, y=y_position + 25 + row * 25)
+                tk.Checkbutton(self.search_frame, text=option, variable=var_list[i]).place(x=10 + col * 200,
+                                                                                           y=y_position + 25 + row * 25)
             y_position += (len(options) + 2) // 3 * 25 + 50
 
     def go_back(self):
         global app
-        
+
         # self.hide()
         # app.home_page.show()
-        
+
         self.search_frame.pack_forget()
         app.home_page.home_frame.pack(fill='both', expand=True)
-    
+
     def search(self):
+        global app
+        self.search_frame.pack_forget()
+        app.results_page.results_frame.pack(fill='both', expand=True)
+
         conn = sqlite3.connect("project.db")
         c = conn.cursor()
         sql.init_db(c)
-        
+
         selected_locations = [self.filters[0][1][i] for i, loc in enumerate(self.location_vars) if loc.get()]
         selected_cuisines = [self.filters[1][1][i] for i, cuis in enumerate(self.cuisine_vars) if cuis.get()]
         selected_restrictions = [self.filters[2][1][i] for i, rest in enumerate(self.restriction_vars) if rest.get()]
@@ -142,14 +154,74 @@ class SearchPage(Page):
         # print("Selected Locations:", selected_locations)
         # print("Selected Cuisines:", selected_cuisines)
         # print("Selected Dietary Restrictions:", selected_restrictions)
-        
+
         rs = sql.get_restaurants(c, selected_locations, selected_cuisines, selected_restrictions)
-        
-        # for r in rs:
-        #     print(r)
-        
+
+        #for r in rs:
+            #print(r)
+
         conn.commit()
         conn.close()
+
+        # Display search results
+        app.results_page.display_results(rs)
+
+    def open_results_page(self):
+        global app
+        self.search_frame.pack_forget()
+        app.results_page.results_frame.pack(fill='both', expand=True)
+
+
+class ResultsPage(Page):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.results_frame = ttk.Frame(self.parent)
+        # self.results_frame.pack(fill='both', expand=True)
+
+        # Add back button
+        back_button = ttk.Button(self.results_frame, text="Back", command=self.go_back)
+        back_button.pack(pady=10)
+
+        # Add label title for the results
+        self.results_label = ttk.Label(self.results_frame, text="Search Results", font=("Arial", 16, 'bold'))
+        self.results_label.pack(pady=10)
+
+        # Add a canvas to hold the result frames
+        self.canvas = tk.Canvas(self.results_frame, background='white')
+        self.canvas.pack(side='left', fill='both', expand=True)
+
+        # Add a scrollbar for the canvas
+        scrollbar = ttk.Scrollbar(self.results_frame, orient='vertical', command=self.canvas.yview)
+        scrollbar.pack(side='right', fill='y')
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Create a frame to contain the result frames
+        self.results_container = ttk.Frame(self.canvas)
+        self.results_container.bind('<Configure>', self.on_frame_configure)
+
+        # Add the results container to the canvas
+        self.canvas.create_window((0, 0), window=self.results_container, anchor='nw')
+
+    def on_frame_configure(self, event):
+        """Update scroll region whenever the size of the frame changes."""
+        self.canvas.configure(scrollregion=self.canvas.bbox('all'))
+
+    def go_back(self):
+        global app
+        self.results_frame.pack_forget()
+        app.home_page.home_frame.pack(fill='both', expand=True)
+
+    def display_results(self, results):
+        """Display the search results."""
+        for result in results:
+            # Create a frame for each result
+            result_frame = ttk.Frame(self.results_container, relief='solid', borderwidth=0)
+            result_frame.pack(fill='x', padx=10, pady=5)
+
+            # Display the result information inside the frame
+            result_label = ttk.Label(result_frame, text=result, font=('Arial', 12))
+            result_label.pack(padx=10, pady=5)
+
 
 root = tk.Tk()
 root.geometry('800x700')
@@ -157,7 +229,8 @@ root.geometry('800x700')
 # Define styles
 style = ttk.Style(root)
 style.configure('Green.TFrame', background='green', bg='green')
-style.configure('AppName.TLabel', background='green', bg='green', foreground='white', fg='white', font=('Arial', 16, 'bold'))
+style.configure('AppName.TLabel', background='green', bg='green', foreground='white', fg='white',
+                font=('Arial', 16, 'bold'))
 style.configure('Circle.TFrame', background='white', bg='white', borderwidth=2, relief='solid')
 style.configure('Plus.TButton', font=('Arial', 16, 'bold'))
 
