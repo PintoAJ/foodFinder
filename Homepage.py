@@ -60,6 +60,56 @@ class HomePage(Page):
                                         font=('Arial', 12), foreground='gray')
         self.no_saved_label.pack(expand=True)
 
+        # Add a frame to display saved results
+        self.dashboard_frame = ttk.Frame(self.home_frame)
+        self.dashboard_frame.pack(fill='both', expand=True)
+        self.display_saved_results()
+
+    def display_saved_results(self):
+        # saved results from the database
+        conn = sqlite3.connect("project.db")
+        c = conn.cursor()
+        c.execute("SELECT id, result FROM dashboard_results")
+        saved_results = c.fetchall()
+        conn.close()
+
+        if saved_results:
+            self.no_saved_label.pack_forget()
+
+            # display saved results
+            saved_results_label = ttk.Label(self.dashboard_frame, text="Saved Results", font=("Arial", 16, 'bold'))
+            saved_results_label.pack(pady=10)
+
+            for result_id, result_text in saved_results:
+                result_frame = ttk.Frame(self.dashboard_frame)
+                result_frame.pack(fill='x', padx=10, pady=5)
+
+                # display text result
+                result_label = ttk.Label(result_frame, text=result_text, font=('Arial', 12))
+                result_label.pack(side='left', padx=10, pady=5)
+
+                # delete button
+                delete_button = ttk.Button(result_frame, text="Delete", command=lambda id=result_id: self.delete_result(id))
+                delete_button.pack(side='right', padx=10, pady=5)
+        else:
+            self.no_saved_label.pack(expand=True)
+
+    def delete_result(self, result_id):
+        # Delete the result with the given ID from the database
+        conn = sqlite3.connect("project.db")
+        c = conn.cursor()
+        c.execute("DELETE FROM dashboard_results WHERE id=?", (result_id,))
+        conn.commit()
+        conn.close()
+
+        # Refresh the display of saved results
+        self.refresh_dashboard()
+
+    def refresh_dashboard(self):
+        for widget in self.dashboard_frame.winfo_children():
+            widget.destroy()
+        self.display_saved_results()
+
     def open_search_page(self):
         global app
 
@@ -177,7 +227,7 @@ class ResultsPage(Page):
         super().__init__(parent)
         self.results_frame = ttk.Frame(self.parent)
         # self.results_frame.pack(fill='both', expand=True)
-
+        
         # Add back button
         back_button = ttk.Button(self.results_frame, text="Back", command=self.go_back)
         back_button.pack(pady=10)
@@ -210,17 +260,41 @@ class ResultsPage(Page):
         global app
         self.results_frame.pack_forget()
         app.home_page.home_frame.pack(fill='both', expand=True)
+        
+    def save_result(self, result):
+            # connect to the SQLite database
+            conn = sqlite3.connect("project.db")
+            c = conn.cursor()
+
+            # create a table 
+            c.execute('''CREATE TABLE IF NOT EXISTS dashboard_results 
+            (record_id integer primary key, 
+            search_result text)''')
+
+            # insert the result into the database
+            c.execute("INSERT INTO dashboard_results (result) VALUES (?)", (str(result),))
+
+            # commit and close the connection
+            conn.commit()
+            conn.close()
+
+            print("Result saved to dashboard:", result)
+
 
     def display_results(self, results):
         """Display the search results."""
         for result in results:
-            # Create a frame for each result
+            # create a frame for each result
             result_frame = ttk.Frame(self.results_container, relief='solid', borderwidth=0)
             result_frame.pack(fill='x', padx=10, pady=5)
 
-            # Display the result information inside the frame
+            # display the result information 
             result_label = ttk.Label(result_frame, text=result, font=('Arial', 12))
-            result_label.pack(padx=10, pady=5)
+            result_label.pack(side='left', padx=10, pady=5)
+
+            # save button for each result
+            save_button = ttk.Button(result_frame, text="Save", command=lambda r=result: self.save_result(r))
+            save_button.pack(side='right', padx=10, pady=5)
 
 
 root = tk.Tk()
